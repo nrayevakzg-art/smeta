@@ -98,6 +98,7 @@ function recalculate() {
   for (const price of positions.querySelectorAll(".price")) {
     price.setAttribute("aria-label", `Цена, ${currencySelect.value}`);
   }
+  renderComparison();
 }
 
 function showOffer(index) {
@@ -178,6 +179,87 @@ function printElement(tag, text, className) {
   if (text !== undefined) element.textContent = text;
   if (className) element.className = className;
   return element;
+}
+
+function comparisonData() {
+  const entries = new Map();
+  const results = offers.map(calculateOffer);
+  offers.forEach((offer, offerIndex) => {
+    offer.rows.forEach((row, rowIndex) => {
+      if (!row.name.trim() && !row.quantity.trim() && !row.price.trim()) return;
+      const name = row.name.trim().replace(/\s+/g, " ");
+      // Сравниваем только одинаковые названия и единицы; безымянные строки не объединяем.
+      const key = name ? JSON.stringify([name.toLocaleLowerCase("ru"), row.unit]) : `unnamed:${offerIndex}:${rowIndex}`;
+      if (!entries.has(key)) entries.set(key, { name: name || "Без наименования", cells: [null, null, null] });
+      const entry = entries.get(key);
+      const cell = entry.cells[offerIndex] || { quantity: 0, amount: 0, unit: row.unit };
+      const quantity = cell.quantity + parseNumber(row.quantity);
+      const amount = cell.amount + results[offerIndex].amounts[rowIndex];
+      cell.quantity = Number.isFinite(quantity) ? quantity : 0;
+      cell.amount = Number.isFinite(amount) ? amount : 0;
+      entry.cells[offerIndex] = cell;
+    });
+  });
+  return { entries: Array.from(entries.values()), results };
+}
+
+function renderComparison() {
+  const { entries, results } = comparisonData();
+  const table = printElement("table", undefined, "comparison-table");
+  table.setAttribute("aria-labelledby", "comparison-heading");
+  const head = printElement("thead");
+  const header = printElement("tr");
+  for (const title of ["Что входит", ...offerNames]) {
+    const th = printElement("th", title);
+    th.setAttribute("scope", "col");
+    header.append(th);
+  }
+  head.append(header);
+  const body = printElement("tbody");
+  for (const entry of entries) {
+    const row = printElement("tr");
+    const name = printElement("th", entry.name);
+    name.setAttribute("scope", "row");
+    row.append(name);
+    for (const cell of entry.cells) {
+      const td = printElement("td");
+      if (cell) {
+        const quantity = String(Number(cell.quantity.toPrecision(12))).replace(".", ",");
+        td.append(printElement("span", `${quantity} ${cell.unit}`, "comparison-quantity"),
+          printElement("span", formatMoney(cell.amount), "comparison-amount"));
+      } else {
+        td.textContent = "—";
+        td.className = "comparison-missing";
+        td.setAttribute("aria-label", "Не входит");
+      }
+      row.append(td);
+    }
+    body.append(row);
+  }
+  if (!entries.length) {
+    const row = printElement("tr");
+    const td = printElement("td", "Добавь позиции в предложения — здесь появится сравнение.");
+    td.setAttribute("colspan", "4");
+    row.append(td);
+    body.append(row);
+  }
+  const foot = printElement("tfoot");
+  const summaries = [["Сумма", "total"]];
+  if (results.some((result) => result.discount)) {
+    summaries.push(["Скидка", "discount"], ["Сумма со скидкой", "discounted"]);
+  }
+  if (results.some((result) => result.vat)) summaries.push(["НДС", "vat"]);
+  summaries.push(["Итого к оплате", "payable"]);
+  for (const [title, key] of summaries) {
+    const row = printElement("tr", undefined, key === "payable" ? "comparison-payable" : "");
+    const label = printElement("th", title);
+    label.setAttribute("scope", "row");
+    row.append(label);
+    results.forEach((result) => row.append(printElement("td", formatMoney(result[key]))));
+    foot.append(row);
+  }
+  table.append(head, body, foot);
+  document.querySelector("#comparison").replaceChildren(table);
 }
 
 function renderPrintOffers() {

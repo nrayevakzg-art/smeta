@@ -71,6 +71,23 @@ textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
 .offer-option output { font-size: 22px; font-weight: 750; color: var(--accent); overflow-wrap: anywhere; max-width: 100%; }
 #save-pdf { background: var(--accent); color: #fff; border: 1px solid var(--accent); padding: 13px 24px; font-weight: 650; }
 #save-pdf:hover { background: #2847b1; }
+.comparison-scroll { overflow-x: auto; margin-top: 22px; border-radius: 10px; }
+.comparison-scroll:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.comparison-table { display: table; min-width: 580px; width: 100%; border-collapse: collapse; }
+.comparison-table thead { display: table-header-group; }
+.comparison-table tbody { display: table-row-group; }
+.comparison-table tfoot { display: table-footer-group; }
+.comparison-table tr { display: table-row; }
+.comparison-table th, .comparison-table td { display: table-cell; width: 22%; padding: 16px 12px; border: 1px solid var(--border); text-align: right; vertical-align: top; overflow-wrap: anywhere; font-size: 14px; }
+.comparison-table th:first-child { width: 34%; text-align: left; }
+.comparison-table thead th { background: #f4f6fa; color: #1e293b; font-weight: 650; }
+.comparison-table tbody th { font-weight: 500; color: #1e293b; }
+.comparison-quantity, .comparison-amount { display: block; }
+.comparison-quantity { margin-bottom: 6px; color: var(--muted); font-size: 13px; }
+.comparison-amount { font-weight: 650; }
+.comparison-missing { color: var(--muted); }
+.comparison-table .comparison-payable th, .comparison-table .comparison-payable td { background: #eef2ff; color: var(--accent); font-weight: 750; font-size: 16px; }
+.comparison-scroll-hint { display: none; }
 
 @media (min-width: 641px) and (max-width: 900px) {
   .page { padding-inline: 16px; }
@@ -105,6 +122,7 @@ textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
   .offer-option { flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; }
   .total-card { padding: 24px 20px; border-radius: 16px; flex-wrap: wrap; }
   #grand-total { margin-left: auto; max-width: 100%; }
+  .comparison-scroll-hint { display: block; color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 0; }
 }
 
 @page { size: A4 portrait; margin: 15mm; }
@@ -150,4 +168,13 @@ textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
   .print-offer td { white-space: pre-wrap; overflow-wrap: anywhere; }
   .print-offer .summary-list { width: 85mm; max-width: 100%; margin-left: auto; }
   .print-offer .print-payable { border-top: 1px solid #777; margin-top: 2mm; padding-top: 3mm; font-weight: 700; }
+  .comparison-hint, .comparison-scroll-hint { display: none; }
+  .comparison-scroll { overflow: visible; margin-top: 3mm; border-radius: 0; }
+  .comparison-table { min-width: 0; }
+  .comparison-table th, .comparison-table td { padding: 2.5mm; border-color: #777; font-size: 9pt; width: 22%; color: #000; background: #fff; }
+  .comparison-table th:first-child { width: 34%; }
+  .comparison-table thead th, .comparison-table tbody th { color: #000; background: #fff; }
+  .comparison-quantity { color: #000; font-size: 9pt; margin-bottom: 1mm; }
+  .comparison-table .comparison-payable th, .comparison-table .comparison-payable td { font-size: 10pt; color: #000; background: #fff; }
+  .comparison-table tr { break-inside: avoid; }
 }

@@ -68,6 +68,12 @@
       <h2 id="total-heading">Итого к оплате</h2>
       <output id="grand-total" aria-live="polite" aria-atomic="true">0 ₸</output>
     </section>
+    <section class="card comparison-card" aria-labelledby="comparison-heading">
+      <h2 id="comparison-heading">Сравнение вариантов</h2>
+      <p class="hint comparison-hint">В ячейках — количество и стоимость. «—» означает, что позиция не входит.</p>
+      <p class="comparison-scroll-hint">Листай таблицу влево и вправо, чтобы увидеть все варианты.</p>
+      <div id="comparison" class="comparison-scroll" tabindex="0" role="region" aria-labelledby="comparison-heading"></div>
+    </section>
     <div id="print-offers" class="print-only"></div>
 
     <section class="card comment-card" aria-labelledby="comment-heading">
