@@ -4,9 +4,12 @@ const positions = document.querySelector("#positions");
 const template = document.querySelector("#position-template");
 const addButton = document.querySelector("#add-position");
 const grandTotal = document.querySelector("#grand-total");
+const discountInput = document.querySelector("#discount-percent");
+const vatInput = document.querySelector("#vat-percent");
+const currencySelect = document.querySelector("#currency");
 
 const moneyFormatter = new Intl.NumberFormat("ru-RU", {
-  maximumFractionDigits: 2,
+  maximumFractionDigits: 0,
 });
 
 function parseNumber(value) {
@@ -18,7 +21,12 @@ function parseNumber(value) {
 
 function formatMoney(value) {
   const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
-  return `${moneyFormatter.format(safeValue).replace(/[\u00a0\u202f]/g, " ")} ₸`;
+  return `${moneyFormatter.format(safeValue).replace(/[\u00a0\u202f]/g, " ")} ${currencySelect.value}`;
+}
+
+function setSummary(outputId, rowId, amount) {
+  document.querySelector(outputId).textContent = formatMoney(amount);
+  if (rowId) document.querySelector(rowId).hidden = amount === 0;
 }
 
 function recalculate() {
@@ -27,23 +35,44 @@ function recalculate() {
     const quantity = parseNumber(row.querySelector(".quantity").value);
     const price = parseNumber(row.querySelector(".price").value);
     const product = quantity * price;
-    const rounded = Math.round(product * 100) / 100;
+    const rounded = Math.round(product);
     const amount = Number.isFinite(rounded) ? rounded : 0;
     row.querySelector(".row-total").textContent = formatMoney(amount);
     total += amount;
   }
-  grandTotal.textContent = formatMoney(Math.round(total * 100) / 100);
+  if (!Number.isFinite(total)) total = 0;
+  const discountPercent = Math.min(parseNumber(discountInput.value), 100);
+  const discount = Math.round(total * (discountPercent / 100));
+  const discounted = total - discount;
+  const vatProduct = discounted * (parseNumber(vatInput.value) / 100);
+  const vat = Number.isFinite(vatProduct) ? Math.round(vatProduct) : 0;
+  setSummary("#subtotal", null, total);
+  setSummary("#discount-amount", "#discount-summary", discount);
+  setSummary("#discounted-total", "#discounted-summary", discounted);
+  setSummary("#vat-amount", "#vat-summary", vat);
+  grandTotal.textContent = formatMoney(discounted + vat);
+
+  for (const mark of document.querySelectorAll(".currency-mark")) {
+    mark.textContent = currencySelect.value;
+  }
+  for (const price of positions.querySelectorAll(".price")) {
+    price.setAttribute("aria-label", `Цена, ${currencySelect.value}`);
+  }
 }
 
 function addPosition(focus = true) {
   const row = template.content.firstElementChild.cloneNode(true);
   positions.append(row);
+  recalculate();
   if (focus) row.querySelector(".position-name").focus();
   return row;
 }
 
 addButton.addEventListener("click", () => addPosition());
 positions.addEventListener("input", recalculate);
+discountInput.addEventListener("input", recalculate);
+vatInput.addEventListener("input", recalculate);
+currencySelect.addEventListener("change", recalculate);
 
 positions.addEventListener("click", (event) => {
   const button = event.target.closest(".remove-button");
