@@ -26,9 +26,19 @@
       </div>
     </section>
 
-    <section class="card positions-card" aria-labelledby="positions-heading">
+    <section class="card offers-card" aria-labelledby="offers-heading">
+      <h2 id="offers-heading">3 предложения для клиента</h2>
+      <p class="hint">Выбери вариант и заполни его состав. В PDF и WhatsApp попадут все 3 предложения.</p>
+      <div class="offer-options" role="group" aria-label="Редактируемое предложение">
+        <button type="button" class="offer-option" data-offer="0" aria-pressed="true"><span>Минимум</span><output id="offer-total-0">0 ₸</output></button>
+        <button type="button" class="offer-option" data-offer="1" aria-pressed="false"><span>Стандарт</span><output id="offer-total-1">0 ₸</output></button>
+        <button type="button" class="offer-option" data-offer="2" aria-pressed="false"><span>Полный</span><output id="offer-total-2">0 ₸</output></button>
+      </div>
+    </section>
+
+    <section class="card positions-card offer-editor" aria-labelledby="positions-heading">
       <div class="section-heading">
-        <h2 id="positions-heading">Позиции</h2>
+        <h2 id="positions-heading">Позиции — Минимум</h2>
         <p class="keyboard-hint" id="keyboard-hint">Enter в последней строке добавит новую</p>
       </div>
       <table aria-labelledby="positions-heading" aria-describedby="keyboard-hint">
@@ -45,7 +55,7 @@
       </div>
     </section>
 
-    <section class="card summary-card" aria-label="Расчёт итога">
+    <section class="card summary-card offer-editor" aria-label="Расчёт итога">
       <dl class="summary-list">
         <div><dt>Сумма</dt><dd><output id="subtotal">0 ₸</output></dd></div>
         <div id="discount-summary" hidden><dt>Скидка</dt><dd><output id="discount-amount">0 ₸</output></dd></div>
@@ -54,10 +64,11 @@
       </dl>
     </section>
 
-    <section class="total-card" aria-labelledby="total-heading">
+    <section class="total-card offer-editor" aria-labelledby="total-heading">
       <h2 id="total-heading">Итого к оплате</h2>
       <output id="grand-total" aria-live="polite" aria-atomic="true">0 ₸</output>
     </section>
+    <div id="print-offers" class="print-only"></div>
 
     <section class="card comment-card" aria-labelledby="comment-heading">
       <h2 id="comment-heading"><label for="comment">Комментарий</label></h2>
