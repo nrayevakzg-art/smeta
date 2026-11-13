@@ -7,6 +7,12 @@ const grandTotal = document.querySelector("#grand-total");
 const discountInput = document.querySelector("#discount-percent");
 const vatInput = document.querySelector("#vat-percent");
 const currencySelect = document.querySelector("#currency");
+const exchangeInput = document.querySelector("#exchange-rate");
+const currencies = ["₸", "$", "€", "₽"];
+let baseCurrency = "₸";
+let appliedCurrency = "₸";
+let exchangeRates = { "₸": "1" };
+let exchangeDrafts = { "₸": "1" };
 const storageKey = "smeta-draft-v1";
 const draftFields = {
   sender: '[name="sender"]',
@@ -38,7 +44,7 @@ function parseNumber(value) {
 
 function formatMoney(value) {
   const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
-  return `${moneyFormatter.format(safeValue).replace(/[\u00a0\u202f]/g, " ")} ${currencySelect.value}`;
+  return `${moneyFormatter.format(safeValue).replace(/[\u00a0\u202f]/g, " ")} ${appliedCurrency}`;
 }
 
 function setSummary(outputId, rowId, amount) {
@@ -47,12 +53,74 @@ function setSummary(outputId, rowId, amount) {
 }
 
 function readRows() {
-  return Array.from(positions.rows, (row) => ({
-    name: row.querySelector(".position-name").value,
-    quantity: row.querySelector(".quantity").value,
-    unit: row.querySelector(".unit").value,
-    price: row.querySelector(".price").value,
+  return Array.from(positions.rows, (row) => {
+    const price = row.querySelector(".price").value;
+    if (row.dataset.displayPrice !== price || row.dataset.basePrice === undefined) {
+      const base = parseNumber(price) * parseNumber(exchangeRates[appliedCurrency]);
+      row.dataset.basePrice = String(Number.isFinite(base) ? base : 0);
+      row.dataset.displayPrice = price;
+    }
+    return {
+      name: row.querySelector(".position-name").value,
+      quantity: row.querySelector(".quantity").value,
+      unit: row.querySelector(".unit").value,
+      price,
+      basePrice: Number(row.dataset.basePrice),
+    };
+  });
+}
+
+function updateExchangeUI(message = "") {
+  const selected = currencySelect.value;
+  const isBase = selected === baseCurrency;
+  document.querySelector("#exchange-controls").hidden = isBase;
+  exchangeInput.disabled = isBase;
+  document.querySelector("#exchange-label").textContent = `Курс вручную: 1 ${selected} = сколько ${baseCurrency}?`;
+  exchangeInput.setAttribute("aria-invalid", String(!isBase && parseNumber(exchangeInput.value) <= 0));
+  document.querySelector("#exchange-status").textContent = message;
+  const note = appliedCurrency === baseCurrency ? "" : `Курс: 1 ${appliedCurrency} = ${exchangeRates[appliedCurrency]} ${baseCurrency} (введён вручную).`;
+  document.querySelector("#exchange-note").textContent = note;
+}
+
+function applyExchangeRate() {
+  const selected = currencySelect.value;
+  if (!currencies.includes(selected)) return;
+  const rawRate = selected === baseCurrency ? "1" : exchangeInput.value;
+  exchangeDrafts[selected] = rawRate;
+  const rate = parseNumber(rawRate);
+  if (rate <= 0) {
+    updateExchangeUI(`Введи курс больше 0. Суммы пока остаются в ${appliedCurrency}.`);
+    saveDraft();
+    return;
+  }
+  captureOffer();
+  // Исходные цены хранятся отдельно: повторная конвертация не накапливает округление.
+  const converted = offers.map((offer) => ({
+    ...offer,
+    rows: offer.rows.map((row) => {
+      const basePrice = Number.isFinite(row.basePrice) ? row.basePrice : parseNumber(row.price) * parseNumber(exchangeRates[appliedCurrency]);
+      return { ...row, basePrice, convertedPrice: basePrice / rate };
+    }),
   }));
+  if (converted.some((offer) => offer.rows.some((row) => !Number.isFinite(row.convertedPrice)))) {
+    updateExchangeUI("Не удалось пересчитать цены: проверь величину курса.");
+    saveDraft();
+    return;
+  }
+  const priceFormatter = new Intl.NumberFormat("ru-RU", { useGrouping: false, maximumFractionDigits: 12 });
+  offers = converted.map((offer) => ({
+    ...offer,
+    rows: offer.rows.map(({ convertedPrice, ...row }) => ({
+      ...row,
+      price: row.price.trim() === "" ? "" : priceFormatter.format(convertedPrice),
+    })),
+  }));
+  exchangeRates[selected] = rawRate;
+  appliedCurrency = selected;
+  showOffer(activeOffer);
+  updateExchangeUI();
+  clearCopyFeedback();
+  saveDraft();
 }
 
 function captureOffer() {
@@ -93,10 +161,10 @@ function recalculate() {
   });
 
   for (const mark of document.querySelectorAll(".currency-mark")) {
-    mark.textContent = currencySelect.value;
+    mark.textContent = appliedCurrency;
   }
   for (const price of positions.querySelectorAll(".price")) {
-    price.setAttribute("aria-label", `Цена, ${currencySelect.value}`);
+    price.setAttribute("aria-label", `Цена, ${appliedCurrency}`);
   }
   renderComparison();
 }
@@ -111,6 +179,10 @@ function showOffer(index) {
     const row = template.content.firstElementChild.cloneNode(true);
     for (const [key, selector] of Object.entries({ name: ".position-name", quantity: ".quantity", unit: ".unit", price: ".price" })) {
       row.querySelector(selector).value = saved[key];
+    }
+    if (Number.isFinite(saved.basePrice)) {
+      row.dataset.basePrice = String(saved.basePrice);
+      row.dataset.displayPrice = saved.price;
     }
     positions.append(row);
   }
@@ -141,7 +213,11 @@ addButton.addEventListener("click", () => addPosition());
 positions.addEventListener("input", recalculate);
 discountInput.addEventListener("input", recalculate);
 vatInput.addEventListener("input", recalculate);
-currencySelect.addEventListener("change", recalculate);
+currencySelect.addEventListener("change", () => {
+  exchangeInput.value = exchangeDrafts[currencySelect.value] ?? "";
+  applyExchangeRate();
+});
+exchangeInput.addEventListener("input", applyExchangeRate);
 
 positions.addEventListener("click", (event) => {
   const button = event.target.closest(".remove-button");
@@ -273,7 +349,7 @@ function renderPrintOffers() {
     table.setAttribute("aria-label", `Позиции — ${offerNames[index]}`);
     const head = printElement("thead");
     const headRow = printElement("tr");
-    for (const title of ["Наименование", "Количество", "Единица", `Цена, ${currencySelect.value}`, "Сумма"]) {
+    for (const title of ["Наименование", "Количество", "Единица", `Цена, ${appliedCurrency}`, "Сумма"]) {
       const th = printElement("th", title);
       th.setAttribute("scope", "col");
       headRow.append(th);
@@ -353,7 +429,8 @@ function saveDraft() {
   }
   const rows = readRows();
   try {
-    localStorage.setItem(storageKey, JSON.stringify({ fields, rows, offers, activeOffer }));
+    const exchange = { baseCurrency, appliedCurrency, rates: exchangeRates, drafts: exchangeDrafts };
+    localStorage.setItem(storageKey, JSON.stringify({ fields, rows, offers, activeOffer, exchange }));
     document.querySelector("#storage-status").textContent = "";
   } catch {
     document.querySelector("#storage-status").textContent = "Браузер не смог сохранить черновик. Сохрани смету в PDF или скопируй текст.";
@@ -373,6 +450,27 @@ function restoreDraft() {
     }
     // Старый черновик становится предложением «Минимум» без потери полей и строк.
     offers = saved.offers || [{ rows: saved.rows, discount: saved.fields.discount, vat: saved.fields.vat }, emptyOffer(), emptyOffer()];
+    // У старого черновика исходная валюта — та, в которой пользователь уже ввёл цены.
+    baseCurrency = saved.fields.currency;
+    appliedCurrency = baseCurrency;
+    exchangeRates = { [baseCurrency]: "1" };
+    exchangeDrafts = { [baseCurrency]: "1" };
+    if (validExchange(saved.exchange)) {
+      baseCurrency = saved.exchange.baseCurrency;
+      appliedCurrency = saved.exchange.appliedCurrency;
+      exchangeRates = { ...saved.exchange.rates, [baseCurrency]: "1" };
+      exchangeDrafts = { ...saved.exchange.drafts, [baseCurrency]: "1" };
+    }
+    // Фиксируем исходную стоимость также у неактивных предложений старого черновика.
+    offers.forEach((offer) => offer.rows.forEach((row) => {
+      if (!Number.isFinite(row.basePrice)) {
+        const base = parseNumber(row.price) * parseNumber(exchangeRates[appliedCurrency]);
+        row.basePrice = Number.isFinite(base) ? base : 0;
+      }
+    }));
+    exchangeInput.value = exchangeDrafts[currencySelect.value] ?? "";
+    const pending = currencySelect.value !== appliedCurrency || (currencySelect.value !== baseCurrency && parseNumber(exchangeInput.value) <= 0);
+    updateExchangeUI(pending ? `Введи курс больше 0. Суммы пока остаются в ${appliedCurrency}.` : "");
     showOffer(Number.isInteger(saved.activeOffer) && saved.activeOffer >= 0 && saved.activeOffer < 3 ? saved.activeOffer : 0);
     return true;
   } catch {
@@ -381,7 +479,15 @@ function restoreDraft() {
 }
 
 function validRows(rows) {
-  return Array.isArray(rows) && rows.every((row) => row && ["name", "quantity", "unit", "price"].every((key) => typeof row[key] === "string") && ["шт", "час", "услуга"].includes(row.unit));
+  return Array.isArray(rows) && rows.every((row) => row && ["name", "quantity", "unit", "price"].every((key) => typeof row[key] === "string") && ["шт", "час", "услуга"].includes(row.unit) && (row.basePrice === undefined || (Number.isFinite(row.basePrice) && row.basePrice >= 0)));
+}
+
+function validExchange(exchange) {
+  return exchange && currencies.includes(exchange.baseCurrency) && currencies.includes(exchange.appliedCurrency)
+    && exchange.rates && exchange.drafts
+    && Object.entries(exchange.rates).every(([key, value]) => currencies.includes(key) && typeof value === "string" && parseNumber(value) > 0)
+    && parseNumber(exchange.rates[exchange.appliedCurrency] || "") > 0
+    && Object.entries(exchange.drafts).every(([key, value]) => currencies.includes(key) && typeof value === "string");
 }
 
 function clearCopyFeedback() {
@@ -405,6 +511,12 @@ function newEstimate() {
   discountInput.value = "0";
   vatInput.value = "0";
   currencySelect.value = "₸";
+  baseCurrency = "₸";
+  appliedCurrency = "₸";
+  exchangeRates = { "₸": "1" };
+  exchangeDrafts = { "₸": "1" };
+  exchangeInput.value = "1";
+  updateExchangeUI();
   offers = offerNames.map(emptyOffer);
   showOffer(0);
   positions.querySelector(".position-name").focus();
@@ -425,6 +537,8 @@ function buildShareText() {
     const value = document.querySelector(draftFields[key]).value.trim();
     if (value) lines.push(`${title}: ${value}`);
   }
+  const exchangeNote = document.querySelector("#exchange-note").textContent;
+  if (exchangeNote) lines.push(exchangeNote);
   lines.push("");
   offers.forEach((offer, index) => {
     const result = calculateOffer(offer);
@@ -474,6 +588,8 @@ for (const button of document.querySelectorAll("[data-offer]")) {
 
 if (!restoreDraft()) {
   document.querySelector("#estimate-date").value = todayValue();
+  exchangeInput.value = "1";
+  updateExchangeUI();
   showOffer(0);
 }
 restoringDraft = false;
