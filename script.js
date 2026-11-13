@@ -102,3 +102,34 @@ document.querySelector("#estimate-date").value = [
 
 addPosition(false);
 recalculate();
+
+function preparePrint() {
+  recalculate();
+  const number = document.querySelector('[name="estimate-number"]').value.trim() || "—";
+  const date = document.querySelector("#estimate-date").value;
+  const formattedDate = date ? date.split("-").reverse().join(".") : "—";
+  document.querySelector("#print-title").textContent = `Смета № ${number} от ${formattedDate}`;
+
+  // Обычный текст печатается целиком, даже если он не помещается в поле ввода.
+  for (const previous of document.querySelectorAll(".print-value")) previous.remove();
+  for (const field of document.querySelectorAll(".details-grid input, .position-row input, .position-row select, #comment")) {
+    const value = document.createElement("span");
+    value.className = "print-value";
+    if (field.matches(".price")) {
+      value.textContent = moneyFormatter.format(parseNumber(field.value)).replace(/[\u00a0\u202f]/g, " ");
+    } else if (field.matches(".quantity")) {
+      value.textContent = String(parseNumber(field.value)).replace(".", ",");
+    } else if (field.type === "date") {
+      value.textContent = formattedDate;
+    } else {
+      value.textContent = field.value.trim();
+    }
+    field.after(value);
+  }
+}
+
+document.querySelector("#save-pdf").addEventListener("click", () => {
+  preparePrint();
+  window.print();
+});
+window.addEventListener("beforeprint", preparePrint);
