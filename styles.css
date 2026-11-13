@@ -59,7 +59,11 @@ td { padding: 12px 6px; border-top: 1px solid #edf0f5; vertical-align: middle; }
 .comment-card { margin-top: 20px; }
 .comment-card h2 label { font-size: inherit; }
 textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
-.print-actions { display: flex; justify-content: flex-end; }
+.print-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+.secondary-button { padding: 13px 18px; background: #fff; border: 1px solid var(--border); color: var(--accent); font-weight: 600; }
+.secondary-button:hover { background: #eef2ff; }
+.action-status { color: var(--muted); font-size: 14px; text-align: right; }
+.action-status:empty { display: none; }
 #save-pdf { background: var(--accent); color: #fff; border: 1px solid var(--accent); padding: 13px 24px; font-weight: 650; }
 #save-pdf:hover { background: #2847b1; }
 
@@ -91,6 +95,7 @@ textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
   .remove-cell { align-self: end; }
   .remove-button { border-color: var(--border); }
   .add-button { width: 100%; margin-top: 2px; }
+  .print-actions button { width: 100%; }
   .total-card { padding: 24px 20px; border-radius: 16px; flex-wrap: wrap; }
   #grand-total { margin-left: auto; max-width: 100%; }
 }
@@ -100,7 +105,7 @@ textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
 @media print {
   :root, body { background: #fff; color: #000; font-size: 11pt; }
   .page { width: 100%; max-width: none; padding: 0; margin: 0; }
-  .page-header, button, .print-actions, .adjustments-grid,
+  .page-header, button, .print-actions, .adjustments-grid, .action-status, #manual-copy,
   .keyboard-hint, .remove-cell, th:last-child, .mobile-label,
   input, select, textarea { display: none !important; }
   .print-only, .print-value { display: block; }
