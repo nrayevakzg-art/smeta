@@ -93,6 +93,71 @@ textarea { margin-top: 18px; resize: vertical; line-height: 1.6; }
 .comparison-table .comparison-payable th, .comparison-table .comparison-payable td { background: #eaf1e3; color: var(--accent); font-weight: 750; font-size: 16px; }
 .comparison-scroll-hint { display: none; }
 
+/* CSS sprout: two leaves and a stem, with no downloaded image assets. */
+.eco-backdrop { display: none; }
+.eco-sprout {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  background: linear-gradient(currentColor, currentColor) center 78% / 5% 52% no-repeat;
+}
+.eco-sprout::before, .eco-sprout::after {
+  content: "";
+  position: absolute;
+  width: 40%;
+  height: 30%;
+  background: currentColor;
+}
+.eco-sprout::before {
+  left: 12%;
+  top: 25%;
+  border-radius: 0 90% 0 90%;
+  transform: rotate(8deg);
+}
+.eco-sprout::after {
+  left: 49%;
+  top: 13%;
+  border-radius: 90% 0 90% 0;
+  transform: rotate(-8deg);
+}
+.eco-logo {
+  display: inline-flex;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  padding: 7px;
+  border: 1px solid #c3d5b8;
+  border-radius: 16px 16px 16px 5px;
+  color: #527548;
+  background: #e5efdc;
+}
+@media screen {
+  body { isolation: isolate; }
+  .page { position: relative; z-index: 1; }
+  .eyebrow { display: flex; align-items: center; gap: 12px; }
+  .eco-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+  .eco-backdrop .eco-sprout { position: absolute; width: 240px; height: 240px; }
+  .eco-sprout--top { right: -40px; top: 20px; color: #c6d7b4; opacity: .36; transform: rotate(25deg); }
+  .eco-sprout--side { left: -95px; top: 40%; color: #c4d7d2; opacity: .32; transform: rotate(-30deg); }
+  .eco-sprout--bottom { right: -65px; bottom: 15px; color: #dfd0ae; opacity: .30; transform: rotate(-20deg); }
+}
+@media screen and (max-width: 640px) {
+  .eco-backdrop .eco-sprout { width: 150px; height: 150px; }
+  .eco-sprout--top { right: -45px; top: 18px; opacity: .23; }
+  .eco-sprout--side { left: -80px; }
+  .eco-sprout--bottom { right: -70px; }
+}
+
 /* Pastel nature palette shared by tariff cards and comparison columns. */
 @media screen {
   body {
