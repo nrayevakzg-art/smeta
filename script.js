@@ -47,6 +47,46 @@ function formatMoney(value) {
   return `${moneyFormatter.format(safeValue).replace(/[\u00a0\u202f]/g, " ")} ${appliedCurrency}`;
 }
 
+function amountInWords(amount) {
+  if (appliedCurrency !== "₸" || currencySelect.value !== "₸"
+    || !Number.isInteger(amount) || amount <= 0 || amount > 999999999) return "";
+  const ones = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
+  const teens = ["десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"];
+  const tens = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто"];
+  const hundreds = ["", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот"];
+  const words = [];
+  const groups = [
+    [Math.floor(amount / 1000000), ["миллион", "миллиона", "миллионов"], false],
+    [Math.floor(amount / 1000) % 1000, ["тысяча", "тысячи", "тысяч"], true],
+    [amount % 1000, null, false],
+  ];
+  for (const [value, forms, feminine] of groups) {
+    if (!value) continue;
+    if (value >= 100) words.push(hundreds[Math.floor(value / 100)]);
+    const lastTwo = value % 100;
+    const last = value % 10;
+    if (lastTwo >= 10 && lastTwo <= 19) {
+      words.push(teens[lastTwo - 10]);
+    } else {
+      if (lastTwo >= 20) words.push(tens[Math.floor(lastTwo / 10)]);
+      if (last) words.push(feminine && last <= 2 ? ["", "одна", "две"][last] : ones[last]);
+    }
+    if (forms) {
+      const form = lastTwo >= 11 && lastTwo <= 14 ? 2 : last === 1 ? 0 : last >= 2 && last <= 4 ? 1 : 2;
+      words.push(forms[form]);
+    }
+  }
+  const text = `${words.join(" ")} тенге`;
+  return text[0].toUpperCase() + text.slice(1);
+}
+
+function updateAmountInWords(amount) {
+  const line = document.querySelector("#amount-in-words");
+  const words = amountInWords(amount);
+  line.textContent = words ? `Сумма прописью: ${words}` : "";
+  line.hidden = !words;
+}
+
 function setSummary(outputId, rowId, amount) {
   document.querySelector(outputId).textContent = formatMoney(amount);
   if (rowId) document.querySelector(rowId).hidden = amount === 0;
@@ -80,6 +120,7 @@ function updateExchangeUI(message = "") {
   document.querySelector("#exchange-status").textContent = message;
   const note = appliedCurrency === baseCurrency ? "" : `Курс: 1 ${appliedCurrency} = ${exchangeRates[appliedCurrency]} ${baseCurrency} (введён вручную).`;
   document.querySelector("#exchange-note").textContent = note;
+  updateAmountInWords(calculateOffer(offers[activeOffer]).payable);
 }
 
 function applyExchangeRate() {
@@ -155,6 +196,7 @@ function recalculate() {
   setSummary("#discounted-total", "#discounted-summary", result.discounted);
   setSummary("#vat-amount", "#vat-summary", result.vat);
   grandTotal.textContent = formatMoney(result.payable);
+  updateAmountInWords(result.payable);
   offers.forEach((offer, index) => {
     const payable = index === activeOffer ? result.payable : calculateOffer(offer).payable;
     document.querySelector(`#offer-total-${index}`).textContent = formatMoney(payable);
@@ -378,6 +420,8 @@ function renderPrintOffers() {
       summary.append(line);
     });
     section.append(summary);
+    const words = amountInWords(result.payable);
+    if (words) section.append(printElement("p", `Сумма прописью: ${words}`, "amount-in-words"));
     container.append(section);
   });
 }
@@ -549,7 +593,10 @@ function buildShareText() {
       lines.push(`• ${row.name.trim() || "Без наименования"} — ${quantity} ${row.unit} × ${formatMoney(parseNumber(row.price))} = ${formatMoney(result.amounts[rowIndex])}`);
     });
     if (!offer.rows.some((row) => row.name.trim() || row.quantity.trim() || row.price.trim())) lines.push("Позиции не добавлены");
-    lines.push(...offerSummary(offer, result).map(([title, amount]) => `${title}: ${formatMoney(amount)}`), "");
+    lines.push(...offerSummary(offer, result).map(([title, amount]) => `${title}: ${formatMoney(amount)}`));
+    const words = amountInWords(result.payable);
+    if (words) lines.push(`Сумма прописью: ${words}`);
+    lines.push("");
   });
   const comment = document.querySelector("#comment").value.trim();
   if (comment) lines.push("", comment);
